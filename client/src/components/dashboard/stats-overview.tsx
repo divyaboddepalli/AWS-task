@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
+import { tasksApi } from "@/lib/tasks";
 
 interface Stats {
   total: number;
@@ -11,6 +12,7 @@ interface Stats {
 export default function StatsOverview() {
   const { data: stats, isLoading } = useQuery<Stats>({
     queryKey: ["/api/tasks/stats"],
+    queryFn: tasksApi.getStats,
   });
 
   if (isLoading) {

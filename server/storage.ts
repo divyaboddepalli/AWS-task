@@ -1,6 +1,7 @@
 import { type User, type InsertUser, type Task, type InsertTask, users, tasks } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
+import { MemoryStorage } from "./memory-storage";
 
 export interface IStorage {
   // User methods
@@ -105,4 +106,7 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-export const storage = new DatabaseStorage();
+export const storage: IStorage =
+  process.env.NODE_ENV === "development"
+    ? new MemoryStorage()
+    : new DatabaseStorage();
