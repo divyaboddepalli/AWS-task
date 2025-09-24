@@ -6,13 +6,12 @@ import * as schema from "@shared/schema";
 neonConfig.webSocketConstructor = ws;
 
 let pool;
-if (process.env.NODE_ENV !== "development" || process.env.DATABASE_URL) {
-  if (!process.env.DATABASE_URL) {
-    throw new Error(
-      "DATABASE_URL must be set for non-development environments. Did you forget to provision a database?",
-    );
-  }
+if (process.env.DATABASE_URL) {
   pool = new Pool({ connectionString: process.env.DATABASE_URL });
+} else if (process.env.NODE_ENV !== "development") {
+  throw new Error(
+    "DATABASE_URL must be set for non-development environments. Did you forget to provision a database?",
+  );
 } else {
   // In development, if no DATABASE_URL is provided, we can use a dummy client
   // or skip initialization. For Drizzle, we need a client, but it won't be used

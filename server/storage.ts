@@ -107,6 +107,6 @@ export class DatabaseStorage implements IStorage {
 }
 
 export const storage: IStorage =
-  process.env.NODE_ENV === "development"
+  process.env.NODE_ENV === "development" && !process.env.DATABASE_URL
     ? new MemoryStorage()
     : new DatabaseStorage();
