@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,28 @@ export default function TaskForm({ isOpen, onClose, task }: TaskFormProps) {
     category: task?.category || "",
     emailFrom: task?.emailFrom || "",
   });
+
+  // Update form data when task prop changes (for edit mode)
+  useEffect(() => {
+    if (isOpen && task) {
+      setFormData({
+        title: task.title || "",
+        description: task.description || "",
+        priority: task.priority || "",
+        category: task.category || "",
+        emailFrom: task.emailFrom || "",
+      });
+    } else if (isOpen && !task) {
+      // Reset form for create mode
+      setFormData({
+        title: "",
+        description: "",
+        priority: "",
+        category: "",
+        emailFrom: "",
+      });
+    }
+  }, [isOpen, task]);
 
   const createTaskMutation = useMutation({
     mutationFn: (data: typeof formData) =>
