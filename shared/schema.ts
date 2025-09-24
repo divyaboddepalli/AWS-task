@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { sql, relations } from "drizzle-orm";
 import { pgTable, text, varchar, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -22,6 +22,18 @@ export const tasks = pgTable("tasks", {
   completed: boolean("completed").notNull().default(false),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
+
+// Database relations
+export const usersRelations = relations(users, ({ many }) => ({
+  tasks: many(tasks),
+}));
+
+export const tasksRelations = relations(tasks, ({ one }) => ({
+  user: one(users, {
+    fields: [tasks.userId],
+    references: [users.id],
+  }),
+}));
 
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
