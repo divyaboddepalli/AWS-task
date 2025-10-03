@@ -35,4 +35,9 @@ export const authApi = {
     const res = await apiRequest("GET", "/api/auth/me");
     return res.json();
   },
+
+  updateUser: async (updates: Partial<User>): Promise<AuthResponse> => {
+    const res = await apiRequest("PUT", "/api/auth/me", updates);
+    return res.json();
+  },
 };

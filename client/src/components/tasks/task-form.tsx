@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { tasksApi } from "@/lib/tasks";
 import type { Task } from "@shared/schema";
 
 interface TaskFormProps {
@@ -51,8 +51,7 @@ export default function TaskForm({ isOpen, onClose, task }: TaskFormProps) {
   }, [isOpen, task]);
 
   const createTaskMutation = useMutation({
-    mutationFn: (data: typeof formData) =>
-      apiRequest("POST", "/api/tasks", data),
+    mutationFn: tasksApi.createTask,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks/stats"] });
@@ -80,8 +79,7 @@ export default function TaskForm({ isOpen, onClose, task }: TaskFormProps) {
   });
 
   const updateTaskMutation = useMutation({
-    mutationFn: (data: typeof formData) =>
-      apiRequest("PUT", `/api/tasks/${task?.id}`, data),
+    mutationFn: (data: typeof formData) => tasksApi.updateTask(task!.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks/stats"] });
