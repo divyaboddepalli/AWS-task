@@ -51,4 +51,20 @@ export const tasksApi = {
     if (!res.ok) throw new Error("Failed to fetch category stats");
     return res.json();
   },
+
+  importTaskFromFile: async (file: File): Promise<Task> => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch("/api/tasks/import-file", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.message || "Failed to import task from file");
+    }
+    return res.json();
+  },
 };

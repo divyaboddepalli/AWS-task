@@ -1,5 +1,10 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import multer from "multer";
+import pdf from "pdf-parse";
+import mammoth from "mammoth";
+import PDFDocument from "pdfkit";
+import { Document, Packer, Paragraph, TextRun } from "docx";
 import { storage } from "./storage";
 import { insertUserSchema, insertTaskSchema, loginSchema } from "@shared/schema";
 import bcrypt from "bcrypt";
@@ -103,6 +108,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update user
+  app.put("/api/auth/me", requireAuth, async (req, res) => {
+    try {
+      const updates = req.body;
+      if (updates.password) {
+        updates.password = await bcrypt.hash(updates.password, 10);
+      }
+
+      const updatedUser = await storage.updateUser(req.session.userId!, updates);
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json({ user: { id: updatedUser.id, email: updatedUser.email, username: updatedUser.username, name: updatedUser.name } });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
   // Get tasks
   app.get("/api/tasks", requireAuth, async (req, res) => {
     try {
@@ -125,6 +149,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(task);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
+    }
+  });
+
+  const upload = multer({ storage: multer.memoryStorage() });
+  app.post("/api/tasks/import-file", requireAuth, upload.single('file'), async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded." });
+    }
+
+    try {
+      let textContent = "";
+      if (req.file.mimetype === "application/pdf") {
+        const data = await pdf(req.file.buffer);
+        textContent = data.text;
+      } else if (req.file.mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+        const { value } = await mammoth.extractRawText({ buffer: req.file.buffer });
+        textContent = value;
+      } else {
+        return res.status(400).json({ message: "Unsupported file type." });
+      }
+
+      const taskData = {
+        title: `Imported from: ${req.file.originalname}`,
+        description: textContent.substring(0, 1000), // Truncate to avoid overly long descriptions
+        userId: req.session.userId!,
+        category: 'general-inquiry',
+        priority: 'medium',
+      };
+
+      const task = await storage.createTask(insertTaskSchema.parse(taskData));
+      res.status(201).json(task);
+    } catch (error: any) {
+      console.error("File import error:", error);
+      res.status(500).json({ message: "Failed to process file." });
     }
   });
 
@@ -166,6 +224,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Task deleted successfully" });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Export task as PDF
+  app.get("/api/tasks/:id/export-pdf", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const task = await storage.getTask(id);
+
+      if (!task || task.userId !== req.session.userId) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+
+      const doc = new PDFDocument({ margin: 50 });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=task-${task.id}.pdf`);
+      doc.pipe(res);
+
+      // Header
+      doc.fontSize(20).text("Task Details", { align: 'center' });
+      doc.moveDown();
+
+      // Task Info
+      doc.fontSize(12).text(`Title: ${task.title}`);
+      doc.text(`Priority: ${task.priority}`);
+      doc.text(`Category: ${task.category}`);
+      doc.text(`Status: ${task.completed ? 'Completed' : 'Pending'}`);
+      doc.text(`Created At: ${new Date(task.createdAt).toLocaleString()}`);
+      if (task.emailFrom) {
+        doc.text(`From: ${task.emailFrom}`);
+      }
+      doc.moveDown();
+
+      // Description
+      doc.fontSize(14).text("Description", { underline: true });
+      doc.fontSize(12).text(task.description || "No description provided.");
+
+      doc.end();
+    } catch (error: any) {
+      console.error("PDF export error:", error);
+      res.status(500).json({ message: "Failed to export task as PDF." });
+    }
+  });
+
+  // Export task as DOCX
+  app.get("/api/tasks/:id/export-docx", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const task = await storage.getTask(id);
+
+      if (!task || task.userId !== req.session.userId) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+
+      const doc = new Document({
+        sections: [{
+          children: [
+            new Paragraph({
+              children: [new TextRun({ text: "Task Details", bold: true, size: 32 })],
+              alignment: 'center',
+            }),
+            new Paragraph({ text: "" }),
+            new Paragraph({ children: [new TextRun({ text: `Title: ${task.title}` })] }),
+            new Paragraph({ children: [new TextRun({ text: `Priority: ${task.priority}` })] }),
+            new Paragraph({ children: [new TextRun({ text: `Category: ${task.category}` })] }),
+            new Paragraph({ children: [new TextRun({ text: `Status: ${task.completed ? 'Completed' : 'Pending'}` })] }),
+            new Paragraph({ children: [new TextRun({ text: `Created At: ${new Date(task.createdAt).toLocaleString()}` })] }),
+            ...(task.emailFrom ? [new Paragraph({ children: [new TextRun({ text: `From: ${task.emailFrom}` })] })] : []),
+            new Paragraph({ text: "" }),
+            new Paragraph({ children: [new TextRun({ text: "Description", bold: true, underline: true })] }),
+            new Paragraph({ children: [new TextRun(task.description || "No description provided.")] }),
+          ],
+        }],
+      });
+
+      const buffer = await Packer.toBuffer(doc);
+      res.setHeader('Content-Disposition', `attachment; filename="task-${task.id}.docx"`);
+      res.type('application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      res.send(buffer);
+    } catch (error: any) {
+      console.error("DOCX export error:", error);
+      res.status(500).json({ message: "Failed to export task as DOCX." });
     }
   });
 

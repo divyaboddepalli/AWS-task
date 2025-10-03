@@ -6,7 +6,6 @@ export function useAuth() {
     queryKey: ["/api/auth/me"],
     queryFn: authApi.getCurrentUser,
     retry: false,
-    staleTime: Infinity,
   });
 
   return { user: data?.user, ...rest };

@@ -1,4 +1,14 @@
-import { apiRequest } from "./queryClient";
+async function handleResponse<T>(res: Response): Promise<T> {
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ message: res.statusText }));
+    throw new Error(errorData.message || "An error occurred");
+  }
+  // For requests that don't return a body on success (e.g., logout)
+  if (res.status === 204 || res.headers.get("content-length") === "0") {
+    return {} as T;
+  }
+  return res.json();
+}
 
 export interface User {
   id: string;
@@ -13,8 +23,12 @@ export interface AuthResponse {
 
 export const authApi = {
   login: async (email: string, password: string): Promise<AuthResponse> => {
-    const res = await apiRequest("POST", "/api/auth/login", { email, password });
-    return res.json();
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    return handleResponse<AuthResponse>(res);
   },
 
   register: async (data: {
@@ -23,21 +37,32 @@ export const authApi = {
     password: string;
     name: string;
   }): Promise<AuthResponse> => {
-    const res = await apiRequest("POST", "/api/auth/register", data);
-    return res.json();
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<AuthResponse>(res);
   },
 
   logout: async (): Promise<void> => {
-    await apiRequest("POST", "/api/auth/logout");
+    const res = await fetch("/api/auth/logout", {
+      method: "POST",
+    });
+    await handleResponse<void>(res);
   },
 
   getCurrentUser: async (): Promise<AuthResponse> => {
-    const res = await apiRequest("GET", "/api/auth/me");
-    return res.json();
+    const res = await fetch("/api/auth/me");
+    return handleResponse<AuthResponse>(res);
   },
 
   updateUser: async (updates: Partial<User>): Promise<AuthResponse> => {
-    const res = await apiRequest("PUT", "/api/auth/me", updates);
-    return res.json();
+    const res = await fetch("/api/auth/me", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updates),
+    });
+    return handleResponse<AuthResponse>(res);
   },
 };

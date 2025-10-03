@@ -44,17 +44,14 @@ export default function SettingsDialog({ isOpen, onClose }: SettingsDialogProps)
     mutationFn: authApi.updateUser,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-      toast({
-        title: "Success",
+      toast.success("Success", {
         description: "Your settings have been updated.",
       });
       onClose();
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: error.message || "Failed to update settings.",
-        variant: "destructive",
       });
     },
   });

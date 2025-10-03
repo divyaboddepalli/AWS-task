@@ -35,22 +35,6 @@ export default function TaskList() {
     setEditingTask(null);
   };
 
-  const handleExport = () => {
-    const csvContent = [
-      "ID,Title,Category,Priority,Completed,Created At",
-      ...tasks.map(t => `${t.id},"${t.title}",${t.category},${t.priority},${t.completed},${t.createdAt}`)
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    if (link.href) {
-      URL.revokeObjectURL(link.href);
-    }
-    link.href = URL.createObjectURL(blob);
-    link.download = `tasks-export-${new Date().toISOString()}.csv`;
-    link.click();
-  };
-
   if (isLoading) {
     return (
       <div className="lg:col-span-2">
@@ -82,13 +66,9 @@ export default function TaskList() {
                     <SelectItem value="low">Low</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button onClick={handleExport} variant="outline">
-                  <i className="fas fa-file-export mr-2"></i>
-                  Export to CSV
-                </Button>
                 <Button onClick={() => setIsImportDialogOpen(true)}>
                   <i className="fas fa-file-import mr-2"></i>
-                  Import from Email
+                  Import Task
                 </Button>
               </div>
             </div>

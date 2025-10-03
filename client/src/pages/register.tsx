@@ -21,17 +21,14 @@ export default function Register() {
   const registerMutation = useMutation({
     mutationFn: (data: typeof formData) => authApi.register(data),
     onSuccess: () => {
-      toast({
-        title: "Success",
+      toast.success("Success", {
         description: "Account created successfully",
       });
       setLocation("/dashboard");
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: error.message || "Registration failed",
-        variant: "destructive",
       });
     },
   });

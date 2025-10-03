@@ -56,8 +56,7 @@ export default function TaskForm({ isOpen, onClose, task }: TaskFormProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks/categories"] });
-      toast({
-        title: "Success",
+      toast.success("Success", {
         description: "Task created successfully",
       });
       onClose();
@@ -70,10 +69,8 @@ export default function TaskForm({ isOpen, onClose, task }: TaskFormProps) {
       });
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: error.message || "Failed to create task",
-        variant: "destructive",
       });
     },
   });
@@ -84,17 +81,14 @@ export default function TaskForm({ isOpen, onClose, task }: TaskFormProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks/categories"] });
-      toast({
-        title: "Success",
+      toast.success("Success", {
         description: "Task updated successfully",
       });
       onClose();
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: error.message || "Failed to update task",
-        variant: "destructive",
       });
     },
   });

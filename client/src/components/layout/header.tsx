@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { authApi } from "@/lib/auth";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -25,10 +26,7 @@ export default function Header({ title, description, onCreateTask }: HeaderProps
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
-  const { data: authData } = useQuery({
-    queryKey: ["/api/auth/me"],
-    queryFn: authApi.getCurrentUser,
-  });
+  const { user } = useAuth();
 
   const logoutMutation = useMutation({
     mutationFn: authApi.logout,
@@ -47,7 +45,7 @@ export default function Header({ title, description, onCreateTask }: HeaderProps
             {description && (
               <p className="text-muted-foreground">
                 {description}
-                {authData?.user && <span data-testid="text-username">{authData.user.name}</span>}
+                {user && <span data-testid="text-username">{user.name}</span>}
               </p>
             )}
           </div>
@@ -66,7 +64,7 @@ export default function Header({ title, description, onCreateTask }: HeaderProps
                 <DropdownMenuTrigger asChild>
                   <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center cursor-pointer">
                     <span className="text-primary-foreground text-sm font-medium" data-testid="text-user-initials">
-                      {authData?.user ? authData.user.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
+                      {user ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
                     </span>
                   </div>
                 </DropdownMenuTrigger>

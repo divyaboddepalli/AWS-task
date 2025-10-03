@@ -20,17 +20,14 @@ export default function Login() {
     mutationFn: ({ email, password }: { email: string; password: string }) =>
       authApi.login(email, password),
     onSuccess: () => {
-      toast({
-        title: "Success",
+      toast.success("Success", {
         description: "Logged in successfully",
       });
       setLocation("/dashboard");
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: error.message || "Login failed",
-        variant: "destructive",
       });
     },
   });

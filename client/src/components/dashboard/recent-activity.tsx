@@ -1,10 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Task } from "@shared/schema";
+import { tasksApi } from "@/lib/tasks";
 
 export default function RecentActivity() {
   const { data: tasks = [], isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
+    queryFn: tasksApi.getTasks,
   });
 
   const recentActivities = tasks
