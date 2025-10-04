@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { authApi } from "@/lib/auth";
 
 export default function Register() {
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     email: "",
@@ -21,6 +22,7 @@ export default function Register() {
   const registerMutation = useMutation({
     mutationFn: (data: typeof formData) => authApi.register(data),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       toast.success("Success", {
         description: "Account created successfully",
       });
