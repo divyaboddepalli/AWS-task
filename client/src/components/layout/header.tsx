@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import SettingsDialog from "./settings-dialog";
 import ProfileDialog from "./profile-dialog";
+import NotificationBell from "./notification-bell";
 import { useLocation } from "wouter";
 
 interface HeaderProps {
@@ -57,9 +58,7 @@ export default function Header({ title, description, onCreateTask }: HeaderProps
               </Button>
             )}
             <div className="flex items-center space-x-3">
-              <button className="text-muted-foreground hover:text-foreground">
-                <i className="fas fa-bell"></i>
-              </button>
+              <NotificationBell />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center cursor-pointer">

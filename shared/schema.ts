@@ -13,6 +13,14 @@ export const users = pgTable("users", {
   passwordResetExpires: timestamp("password_reset_expires"),
 });
 
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  message: text("message").notNull(),
+  read: boolean("read").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
 export const tasks = pgTable("tasks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: text("title").notNull(),
@@ -28,6 +36,14 @@ export const tasks = pgTable("tasks", {
 // Database relations
 export const usersRelations = relations(users, ({ many }) => ({
   tasks: many(tasks),
+  notifications: many(notifications),
+}));
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.id],
+  }),
 }));
 
 export const tasksRelations = relations(tasks, ({ one }) => ({
@@ -39,11 +55,19 @@ export const tasksRelations = relations(tasks, ({ one }) => ({
 
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
+  passwordResetToken: true,
+  passwordResetExpires: true,
 });
 
 export const insertTaskSchema = createInsertSchema(tasks).omit({
   id: true,
   createdAt: true,
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+  read: true,
 });
 
 export const loginSchema = z.object({
@@ -55,4 +79,6 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertTask = z.infer<typeof insertTaskSchema>;
 export type Task = typeof tasks.$inferSelect;
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type LoginData = z.infer<typeof loginSchema>;

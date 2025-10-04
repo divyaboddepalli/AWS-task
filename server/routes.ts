@@ -1,16 +1,16 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { insertUserSchema, insertTaskSchema, loginSchema } from "@shared/schema";
+import bcrypt from "bcryptjs";
+import session from "express-session";
 import crypto from "crypto";
+import { sendPasswordResetEmail } from "./email";
 import multer from "multer";
 import { pdf } from "pdf-parse";
 import mammoth from "mammoth";
 import PDFDocument from "pdfkit";
 import { Document, Packer, Paragraph, TextRun } from "docx";
-import { storage } from "./storage";
-import { sendPasswordResetEmail } from "./email";
-import { insertUserSchema, insertTaskSchema, loginSchema } from "@shared/schema";
-import bcrypt from "bcryptjs";
-import session from "express-session";
 
 declare module "express-session" {
   interface SessionData {
@@ -41,13 +41,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userData = insertUserSchema.parse(req.body);
       
       // Check if user already exists
-      const existingEmail = await storage.getUserByEmail(userData.email);
-      if (existingEmail) {
-        return res.status(400).json({ message: "A user with that email already exists." });
-      }
-      const existingUsername = await storage.getUserByUsername(userData.username);
-      if (existingUsername) {
-        return res.status(400).json({ message: "That username is already taken." });
+      const existingUser = await storage.getUserByEmail(userData.email);
+      if (existingUser) {
+        return res.status(400).json({ message: "User already exists" });
       }
 
       // Hash password
@@ -149,7 +145,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-
   // Get current user
   app.get("/api/auth/me", requireAuth, async (req, res) => {
     try {
@@ -201,43 +196,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const task = await storage.createTask(taskData);
+
+      // Create a notification for the new task
+      await storage.createNotification({
+        userId: req.session.userId!,
+        message: `New task created: "${task.title}" is now pending.`,
+      });
+
       res.status(201).json(task);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
-    }
-  });
-
-  const upload = multer({ storage: multer.memoryStorage() });
-  app.post("/api/tasks/import-file", requireAuth, upload.single('file'), async (req, res) => {
-    if (!req.file) {
-      return res.status(400).json({ message: "No file uploaded." });
-    }
-
-    try {
-      let textContent = "";
-      if (req.file.mimetype === "application/pdf") {
-        const data = await pdf(req.file.buffer);
-        textContent = data.text;
-      } else if (req.file.mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
-        const { value } = await mammoth.extractRawText({ buffer: req.file.buffer });
-        textContent = value;
-      } else {
-        return res.status(400).json({ message: "Unsupported file type." });
-      }
-
-      const taskData = {
-        title: `Imported from: ${req.file.originalname}`,
-        description: textContent.substring(0, 1000), // Truncate to avoid overly long descriptions
-        userId: req.session.userId!,
-        category: 'general-inquiry',
-        priority: 'medium',
-      };
-
-      const task = await storage.createTask(insertTaskSchema.parse(taskData));
-      res.status(201).json(task);
-    } catch (error: any) {
-      console.error("File import error:", error);
-      res.status(500).json({ message: "Failed to process file." });
     }
   });
 
@@ -254,6 +222,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const task = await storage.updateTask(id, updates);
+
+      if (updates.completed && !existingTask.completed) {
+        await storage.createNotification({
+          userId: req.session.userId!,
+          message: `Task completed: "${task.title}"`,
+        });
+      }
+
       res.json(task);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -282,6 +258,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const upload = multer({ storage: multer.memoryStorage() });
+  app.post("/api/tasks/import-file", requireAuth, upload.single('file'), async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded." });
+    }
+
+    try {
+      let textContent = "";
+      if (req.file.mimetype === "application/pdf") {
+        const data = await pdf(req.file.buffer);
+        textContent = data.text;
+      } else if (req.file.mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+        const { value } = await mammoth.extractRawText({ buffer: req.file.buffer });
+        textContent = value;
+      } else {
+        return res.status(400).json({ message: "Unsupported file type." });
+      }
+
+      const taskData = {
+        title: `Imported from: ${req.file.originalname}`,
+        description: textContent.substring(0, 1000), // Truncate to avoid overly long descriptions
+        userId: req.session.userId!,
+        category: 'general-inquiry',
+        priority: 'medium',
+        emailFrom: 'file-import'
+      };
+
+      const task = await storage.createTask(insertTaskSchema.parse(taskData));
+      res.status(201).json(task);
+    } catch (error: any) {
+      console.error("File import error:", error);
+      res.status(500).json({ message: "Failed to process file." });
+    }
+  });
+
   // Export task as PDF
   app.get("/api/tasks/:id/export-pdf", requireAuth, async (req, res) => {
     try {
@@ -297,11 +308,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Content-Disposition', `attachment; filename=task-${task.id}.pdf`);
       doc.pipe(res);
 
-      // Header
       doc.fontSize(20).text("Task Details", { align: 'center' });
       doc.moveDown();
-
-      // Task Info
       doc.fontSize(12).text(`Title: ${task.title}`);
       doc.text(`Priority: ${task.priority}`);
       doc.text(`Category: ${task.category}`);
@@ -311,12 +319,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         doc.text(`From: ${task.emailFrom}`);
       }
       doc.moveDown();
-
-      // Description
       doc.fontSize(14).text("Description", { underline: true });
       doc.fontSize(12).text(task.description || "No description provided.");
-
       doc.end();
+
+      // Create a notification for the export
+      await storage.createNotification({
+        userId: req.session.userId!,
+        message: `Task exported to PDF: "${task.title}"`,
+      });
     } catch (error: any) {
       console.error("PDF export error:", error);
       res.status(500).json({ message: "Failed to export task as PDF." });
@@ -358,6 +369,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Content-Disposition', `attachment; filename="task-${task.id}.docx"`);
       res.type('application/vnd.openxmlformats-officedocument.wordprocessingml.document');
       res.send(buffer);
+
+      // Create a notification for the export
+      await storage.createNotification({
+        userId: req.session.userId!,
+        message: `Task exported to DOCX: "${task.title}"`,
+      });
     } catch (error: any) {
       console.error("DOCX export error:", error);
       res.status(500).json({ message: "Failed to export task as DOCX." });
@@ -379,6 +396,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const categories = await storage.getCategoryStats(req.session.userId!);
       res.json(categories);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get notifications
+  app.get("/api/notifications", requireAuth, async (req, res) => {
+    try {
+      const notifications = await storage.getNotificationsByUserId(req.session.userId!);
+      res.json(notifications);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

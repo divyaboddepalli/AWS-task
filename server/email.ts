@@ -30,7 +30,7 @@ export async function sendPasswordResetEmail(email: string, token: string, host:
   try {
     const info = await transporter.sendMail(mailOptions);
     console.log("Password reset email sent (logged to console):");
-    // The `info.message` contains the full raw email content
+    // The `info.message` contains the full raw email content, including the link.
     console.log(info.message.toString());
     return true;
   } catch (error) {
