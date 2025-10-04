@@ -9,7 +9,7 @@ import { Document, Packer, Paragraph, TextRun } from "docx";
 import { storage } from "./storage";
 import { sendPasswordResetEmail } from "./email";
 import { insertUserSchema, insertTaskSchema, loginSchema } from "@shared/schema";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import session from "express-session";
 
 declare module "express-session" {
@@ -41,9 +41,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userData = insertUserSchema.parse(req.body);
       
       // Check if user already exists
-      const existingUser = await storage.getUserByEmail(userData.email);
-      if (existingUser) {
-        return res.status(400).json({ message: "User already exists" });
+      const existingEmail = await storage.getUserByEmail(userData.email);
+      if (existingEmail) {
+        return res.status(400).json({ message: "A user with that email already exists." });
+      }
+      const existingUsername = await storage.getUserByUsername(userData.username);
+      if (existingUsername) {
+        return res.status(400).json({ message: "That username is already taken." });
       }
 
       // Hash password
