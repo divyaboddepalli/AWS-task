@@ -304,9 +304,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const doc = new PDFDocument({ margin: 50 });
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename=task-${task.id}.pdf`);
-      doc.pipe(res);
+      const buffers: any[] = [];
+      doc.on('data', buffers.push.bind(buffers));
+      doc.on('end', async () => {
+        const pdfData = Buffer.concat(buffers);
+
+        // Create a notification for the export
+        await storage.createNotification({
+          userId: req.session.userId!,
+          message: `Task exported to PDF: "${task.title}"`,
+        });
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=task-${task.id}.pdf`);
+        res.send(pdfData);
+      });
 
       doc.fontSize(20).text("Task Details", { align: 'center' });
       doc.moveDown();
@@ -322,12 +334,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       doc.fontSize(14).text("Description", { underline: true });
       doc.fontSize(12).text(task.description || "No description provided.");
       doc.end();
-
-      // Create a notification for the export
-      await storage.createNotification({
-        userId: req.session.userId!,
-        message: `Task exported to PDF: "${task.title}"`,
-      });
     } catch (error: any) {
       console.error("PDF export error:", error);
       res.status(500).json({ message: "Failed to export task as PDF." });
@@ -366,15 +372,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const buffer = await Packer.toBuffer(doc);
-      res.setHeader('Content-Disposition', `attachment; filename="task-${task.id}.docx"`);
-      res.type('application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-      res.send(buffer);
 
       // Create a notification for the export
       await storage.createNotification({
         userId: req.session.userId!,
         message: `Task exported to DOCX: "${task.title}"`,
       });
+
+      res.setHeader('Content-Disposition', `attachment; filename="task-${task.id}.docx"`);
+      res.type('application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      res.send(buffer);
     } catch (error: any) {
       console.error("DOCX export error:", error);
       res.status(500).json({ message: "Failed to export task as DOCX." });

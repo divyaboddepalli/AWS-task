@@ -4,7 +4,6 @@ import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import StatsOverview from "@/components/dashboard/stats-overview";
 import TaskList from "@/components/tasks/task-list";
-import QuickActions from "@/components/dashboard/quick-actions";
 import CategoryBreakdown from "@/components/dashboard/category-breakdown";
 import RecentActivity from "@/components/dashboard/recent-activity";
 import TaskForm from "@/components/tasks/task-form";
@@ -32,7 +31,6 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <TaskList />
             <div className="space-y-6">
-              <QuickActions onCreateTask={() => setIsTaskFormOpen(true)} />
               <CategoryBreakdown />
               <RecentActivity />
             </div>

@@ -32,16 +32,13 @@ export default function TaskCard({ task, onEdit }: TaskCardProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks/categories"] });
-      toast({
-        title: "Success",
+      toast.success("Success", {
         description: "Task deleted successfully",
       });
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: error.message || "Failed to delete task",
-        variant: "destructive",
       });
     },
   });
@@ -52,12 +49,11 @@ export default function TaskCard({ task, onEdit }: TaskCardProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: error.message || "Failed to update task",
-        variant: "destructive",
       });
     },
   });
