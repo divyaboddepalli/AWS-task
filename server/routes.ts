@@ -1,6 +1,11 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import multer from "multer";
+import { pdf } from "pdf-parse";
+import mammoth from "mammoth";
+import crypto from "crypto";
 import { storage } from "./storage";
+import { sendPasswordResetEmail } from "./email";
 import { insertUserSchema, insertTaskSchema, loginSchema } from "@shared/schema";
 import bcrypt from "bcrypt";
 import session from "express-session";
@@ -90,6 +95,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  app.post('/api/auth/forgot-password', async (req, res) => {
+    try {
+      const { email } = req.body;
+      const user = await storage.getUserByEmail(email);
+
+      if (!user) {
+        // We send a success response even if the user doesn't exist to prevent email enumeration attacks.
+        return res.json({ message: 'If a matching account was found, a password reset link has been sent.' });
+      }
+
+      const token = crypto.randomBytes(32).toString('hex');
+      const expires = new Date(Date.now() + 3600000); // 1 hour from now
+
+      await storage.updateUser(user.id, { passwordResetToken: token, passwordResetExpires: expires });
+
+      const host = req.get('host') || 'localhost:3000';
+      await sendPasswordResetEmail(user.email, token, host);
+
+      res.json({ message: 'If a matching account was found, a password reset link has been sent.' });
+    } catch (error: any) {
+      res.status(500).json({ message: 'An error occurred while processing your request.' });
+    }
+  });
+
+  app.post('/api/auth/reset-password', async (req, res) => {
+    try {
+      const { token, password } = req.body;
+      const user = await storage.getUserByPasswordResetToken(token);
+
+      if (!user || !user.passwordResetExpires || user.passwordResetExpires < new Date()) {
+        return res.status(400).json({ message: 'Password reset token is invalid or has expired.' });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+      await storage.updateUser(user.id, {
+        password: hashedPassword,
+        passwordResetToken: null,
+        passwordResetExpires: null,
+      });
+
+      res.json({ message: 'Password has been updated successfully.' });
+    } catch (error: any) {
+      res.status(500).json({ message: 'An error occurred while resetting your password.' });
+    }
+  });
+
   // Get current user
   app.get("/api/auth/me", requireAuth, async (req, res) => {
     try {
@@ -125,6 +176,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(task);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
+    }
+  });
+
+  const upload = multer({ storage: multer.memoryStorage() });
+  app.post("/api/tasks/import-file", requireAuth, upload.single('file'), async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded." });
+    }
+
+    try {
+      let textContent = "";
+      if (req.file.mimetype === "application/pdf") {
+        const data = await pdf(req.file.buffer);
+        textContent = data.text;
+      } else if (req.file.mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+        const { value } = await mammoth.extractRawText({ buffer: req.file.buffer });
+        textContent = value;
+      } else {
+        return res.status(400).json({ message: "Unsupported file type." });
+      }
+
+      const taskData = {
+        title: `Imported from: ${req.file.originalname}`,
+        description: textContent.substring(0, 1000), // Truncate to avoid overly long descriptions
+        userId: req.session.userId!,
+        category: 'general-inquiry',
+        priority: 'medium',
+      };
+
+      const task = await storage.createTask(insertTaskSchema.parse(taskData));
+      res.status(201).json(task);
+    } catch (error: any) {
+      console.error("File import error:", error);
+      res.status(500).json({ message: "Failed to process file." });
     }
   });
 
