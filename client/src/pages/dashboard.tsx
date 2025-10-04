@@ -1,14 +1,22 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import StatsOverview from "@/components/dashboard/stats-overview";
 import TaskList from "@/components/tasks/task-list";
+import QuickActions from "@/components/dashboard/quick-actions";
 import CategoryBreakdown from "@/components/dashboard/category-breakdown";
 import RecentActivity from "@/components/dashboard/recent-activity";
 import TaskForm from "@/components/tasks/task-form";
+import { authApi } from "@/lib/auth";
 
 export default function Dashboard() {
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
+
+  const { data: authData } = useQuery({
+    queryKey: ["/api/auth/me"],
+    queryFn: authApi.getCurrentUser,
+  });
 
   return (
     <div className="min-h-screen flex">
@@ -24,6 +32,7 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <TaskList />
             <div className="space-y-6">
+              <QuickActions onCreateTask={() => setIsTaskFormOpen(true)} />
               <CategoryBreakdown />
               <RecentActivity />
             </div>

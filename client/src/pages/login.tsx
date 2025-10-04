@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,6 @@ import { authApi } from "@/lib/auth";
 
 export default function Login() {
   const [, setLocation] = useLocation();
-  const queryClient = useQueryClient();
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     email: "",
@@ -21,15 +20,17 @@ export default function Login() {
     mutationFn: ({ email, password }: { email: string; password: string }) =>
       authApi.login(email, password),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-      toast.success("Success", {
+      toast({
+        title: "Success",
         description: "Logged in successfully",
       });
       setLocation("/dashboard");
     },
     onError: (error: any) => {
-      toast.error("Error", {
+      toast({
+        title: "Error",
         description: error.message || "Login failed",
+        variant: "destructive",
       });
     },
   });

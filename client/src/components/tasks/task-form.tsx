@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { tasksApi } from "@/lib/tasks";
+import { apiRequest } from "@/lib/queryClient";
 import type { Task } from "@shared/schema";
 
 interface TaskFormProps {
@@ -51,12 +51,14 @@ export default function TaskForm({ isOpen, onClose, task }: TaskFormProps) {
   }, [isOpen, task]);
 
   const createTaskMutation = useMutation({
-    mutationFn: tasksApi.createTask,
+    mutationFn: (data: typeof formData) =>
+      apiRequest("POST", "/api/tasks", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks/categories"] });
-      toast.success("Success", {
+      toast({
+        title: "Success",
         description: "Task created successfully",
       });
       onClose();
@@ -69,26 +71,32 @@ export default function TaskForm({ isOpen, onClose, task }: TaskFormProps) {
       });
     },
     onError: (error: any) => {
-      toast.error("Error", {
+      toast({
+        title: "Error",
         description: error.message || "Failed to create task",
+        variant: "destructive",
       });
     },
   });
 
   const updateTaskMutation = useMutation({
-    mutationFn: (data: typeof formData) => tasksApi.updateTask(task!.id, data),
+    mutationFn: (data: typeof formData) =>
+      apiRequest("PUT", `/api/tasks/${task?.id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks/categories"] });
-      toast.success("Success", {
+      toast({
+        title: "Success",
         description: "Task updated successfully",
       });
       onClose();
     },
     onError: (error: any) => {
-      toast.error("Error", {
+      toast({
+        title: "Error",
         description: error.message || "Failed to update task",
+        variant: "destructive",
       });
     },
   });

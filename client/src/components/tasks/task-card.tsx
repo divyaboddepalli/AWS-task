@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { tasksApi } from "@/lib/tasks";
+import { apiRequest } from "@/lib/queryClient";
 import type { Task } from "@shared/schema";
 
 interface TaskCardProps {
@@ -27,43 +27,40 @@ export default function TaskCard({ task, onEdit }: TaskCardProps) {
   const { toast } = useToast();
 
   const deleteTaskMutation = useMutation({
-    mutationFn: tasksApi.deleteTask,
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/tasks/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks/categories"] });
-      toast.success("Success", {
+      toast({
+        title: "Success",
         description: "Task deleted successfully",
       });
     },
     onError: (error: any) => {
-      toast.error("Error", {
+      toast({
+        title: "Error",
         description: error.message || "Failed to delete task",
+        variant: "destructive",
       });
     },
   });
 
   const toggleCompleteMutation = useMutation({
     mutationFn: ({ id, completed }: { id: string; completed: boolean }) =>
-      tasksApi.updateTask(id, { completed }),
+      apiRequest("PUT", `/api/tasks/${id}`, { completed }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks/stats"] });
     },
     onError: (error: any) => {
-      toast.error("Error", {
+      toast({
+        title: "Error",
         description: error.message || "Failed to update task",
+        variant: "destructive",
       });
     },
   });
-
-  const handleExportPdf = () => {
-    window.open(`/api/tasks/${task.id}/export-pdf`, "_blank");
-  };
-
-  const handleExportDocx = () => {
-    window.open(`/api/tasks/${task.id}/export-docx`, "_blank");
-  };
 
   const formatTimeAgo = (dateString: string | Date) => {
     const date = new Date(dateString);
@@ -114,22 +111,6 @@ export default function TaskCard({ task, onEdit }: TaskCardProps) {
           </div>
         </div>
         <div className="flex items-center space-x-2 ml-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleExportPdf}
-            data-testid={`button-export-pdf-${task.id}`}
-          >
-            <i className="fas fa-file-pdf"></i>
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleExportDocx}
-            data-testid={`button-export-docx-${task.id}`}
-          >
-            <i className="fas fa-file-word"></i>
-          </Button>
           <Button
             variant="ghost"
             size="sm"

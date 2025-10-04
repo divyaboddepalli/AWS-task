@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { tasksApi } from "@/lib/tasks";
 
 const categoryColors = {
   "brand-collaboration": "bg-blue-500",
@@ -19,7 +18,6 @@ const categoryLabels = {
 export default function CategoryBreakdown() {
   const { data: categories = {}, isLoading } = useQuery<Record<string, number>>({
     queryKey: ["/api/tasks/categories"],
-    queryFn: tasksApi.getCategoryStats,
   });
 
   if (isLoading) {
