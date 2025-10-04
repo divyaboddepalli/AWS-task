@@ -2,17 +2,22 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import TaskCard from "./task-card";
 import TaskForm from "./task-form";
+import ImportDialog from "./import-dialog";
+import { tasksApi } from "@/lib/tasks";
 import type { Task } from "@shared/schema";
 
 export default function TaskList() {
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   const { data: tasks = [], isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
+    queryFn: tasksApi.getTasks,
   });
 
   const filteredTasks = tasks.filter(task => {
@@ -61,6 +66,10 @@ export default function TaskList() {
                     <SelectItem value="low">Low</SelectItem>
                   </SelectContent>
                 </Select>
+                <Button onClick={() => setIsImportDialogOpen(true)}>
+                  <i className="fas fa-file-import mr-2"></i>
+                  Import Task
+                </Button>
               </div>
             </div>
           </CardHeader>
@@ -82,6 +91,11 @@ export default function TaskList() {
         isOpen={isFormOpen}
         onClose={handleCloseForm}
         task={editingTask || undefined}
+      />
+
+      <ImportDialog
+        isOpen={isImportDialogOpen}
+        onClose={() => setIsImportDialogOpen(false)}
       />
     </>
   );
