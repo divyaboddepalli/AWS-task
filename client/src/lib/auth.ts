@@ -1,13 +1,4 @@
-async function handleResponse<T>(res: Response): Promise<T> {
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({ message: res.statusText }));
-    throw new Error(errorData.message || "An error occurred");
-  }
-  if (res.status === 204 || res.headers.get("content-length") === "0") {
-    return {} as T;
-  }
-  return res.json();
-}
+import { apiRequest } from "./queryClient";
 
 export interface User {
   id: string;
@@ -22,12 +13,8 @@ export interface AuthResponse {
 
 export const authApi = {
   login: async (email: string, password: string): Promise<AuthResponse> => {
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    return handleResponse<AuthResponse>(res);
+    const res = await apiRequest("POST", "/api/auth/login", { email, password });
+    return res.json();
   },
 
   register: async (data: {
@@ -36,41 +23,16 @@ export const authApi = {
     password: string;
     name: string;
   }): Promise<AuthResponse> => {
-    const res = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    return handleResponse<AuthResponse>(res);
+    const res = await apiRequest("POST", "/api/auth/register", data);
+    return res.json();
   },
 
   logout: async (): Promise<void> => {
-    const res = await fetch("/api/auth/logout", {
-      method: "POST",
-    });
-    await handleResponse<void>(res);
+    await apiRequest("POST", "/api/auth/logout");
   },
 
   getCurrentUser: async (): Promise<AuthResponse> => {
-    const res = await fetch("/api/auth/me");
-    return handleResponse<AuthResponse>(res);
-  },
-
-  forgotPassword: async (email: string): Promise<{ message: string }> => {
-    const res = await fetch("/api/auth/forgot-password", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    });
-    return handleResponse<{ message: string }>(res);
-  },
-
-  resetPassword: async (password: string, token: string): Promise<{ message: string }> => {
-    const res = await fetch("/api/auth/reset-password", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password, token }),
-    });
-    return handleResponse<{ message: string }>(res);
+    const res = await apiRequest("GET", "/api/auth/me");
+    return res.json();
   },
 };

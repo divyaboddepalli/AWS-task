@@ -9,8 +9,6 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
   name: text("name").notNull(),
-  passwordResetToken: text("password_reset_token"),
-  passwordResetExpires: timestamp("password_reset_expires"),
 });
 
 export const tasks = pgTable("tasks", {

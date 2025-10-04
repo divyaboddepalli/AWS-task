@@ -53,44 +53,61 @@ export default function TaskForm({ isOpen, onClose, task }: TaskFormProps) {
   const createTaskMutation = useMutation({
     mutationFn: (data: typeof formData) =>
       apiRequest("POST", "/api/tasks", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks/categories"] });
+      toast({
+        title: "Success",
+        description: "Task created successfully",
+      });
+      onClose();
+      setFormData({
+        title: "",
+        description: "",
+        priority: "",
+        category: "",
+        emailFrom: "",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create task",
+        variant: "destructive",
+      });
+    },
   });
 
   const updateTaskMutation = useMutation({
     mutationFn: (data: typeof formData) =>
       apiRequest("PUT", `/api/tasks/${task?.id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks/categories"] });
+      toast({
+        title: "Success",
+        description: "Task updated successfully",
+      });
+      onClose();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update task",
+        variant: "destructive",
+      });
+    },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const mutation = task ? updateTaskMutation : createTaskMutation;
-    mutation.mutate(formData, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/tasks/stats"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/tasks/categories"] });
-        toast({
-          title: "Success",
-          description: `Task ${task ? 'updated' : 'created'} successfully`,
-        });
-        onClose();
-        if (!task) {
-          setFormData({
-            title: "",
-            description: "",
-            priority: "",
-            category: "",
-            emailFrom: "",
-          });
-        }
-      },
-      onError: (error: any) => {
-        toast({
-          title: "Error",
-          description: error.message || `Failed to ${task ? 'update' : 'create'} task`,
-          variant: "destructive",
-        });
-      },
-    });
+    if (task) {
+      updateTaskMutation.mutate(formData);
+    } else {
+      createTaskMutation.mutate(formData);
+    }
   };
 
   const isLoading = createTaskMutation.isPending || updateTaskMutation.isPending;
