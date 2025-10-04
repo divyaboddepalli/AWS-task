@@ -50,7 +50,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hashedPassword = await bcrypt.hash(userData.password, 10);
       
       const user = await storage.createUser({
-        ...userData,
+        name: userData.name,
+        username: userData.username,
+        email: userData.email,
         password: hashedPassword,
       });
 
@@ -342,7 +344,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             new Paragraph({ children: [new TextRun({ text: `Created At: ${new Date(task.createdAt).toLocaleString()}` })] }),
             ...(task.emailFrom ? [new Paragraph({ children: [new TextRun({ text: `From: ${task.emailFrom}` })] })] : []),
             new Paragraph({ text: "" }),
-            new Paragraph({ children: [new TextRun({ text: "Description", bold: true, underline: true })] }),
+            new Paragraph({ children: [new TextRun({ text: "Description", bold: true, underline: { type: 'single' } })] }),
             new Paragraph({ children: [new TextRun(task.description || "No description provided.")] }),
           ],
         }],
