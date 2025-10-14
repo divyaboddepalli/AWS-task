@@ -1,6 +1,7 @@
 import { sql, relations } from "drizzle-orm";
 import { pgTable, text, varchar, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
+import { on } from "events";
 import { z } from "zod";
 
 export const users = pgTable("users", {
@@ -15,7 +16,7 @@ export const users = pgTable("users", {
 
 export const notifications = pgTable("notifications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   message: text("message").notNull(),
   read: boolean("read").notNull().default(false),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),

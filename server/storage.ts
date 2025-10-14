@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Task, type InsertTask, users, tasks } from "@shared/schema";
+import { type User, type InsertUser, type Task, type InsertTask, users, tasks,  type Notification, type InsertNotification, notifications } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
 

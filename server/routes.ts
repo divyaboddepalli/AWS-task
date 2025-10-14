@@ -223,7 +223,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const task = await storage.updateTask(id, updates);
 
-      if (updates.completed && !existingTask.completed) {
+      if (updates.completed && !existingTask.completed && task) {
         await storage.createNotification({
           userId: req.session.userId!,
           message: `Task completed: "${task.title}"`,

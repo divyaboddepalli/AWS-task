@@ -32,8 +32,10 @@ export default function TaskCard({ task, onEdit }: TaskCardProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks/categories"] });
-      toast.success("Success", {
+      toast({
+        title: "Success",
         description: "Task deleted successfully",
+        variant: "success",
       });
     },
     onError: (error: any) => {
