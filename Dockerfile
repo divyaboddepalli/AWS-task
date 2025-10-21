@@ -12,7 +12,7 @@ COPY . .
 
 RUN npm rebuild esbuild
 # Build the frontend and backend
-# The `build` script in package.json handles both vite and esbuild
+# The build script in package.json handles both vite and esbuild
 RUN npm run build
 
 # Prune development dependencies for the final image
