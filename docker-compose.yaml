@@ -1,3 +1,5 @@
+version: '3.8'
+
 networks:
   app-network:
     driver: bridge
@@ -7,22 +9,20 @@ services:
     build: .
     ports:
       - "${APP_PORT:-5000}:5000"
-    env_file:
-      - .env
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - PORT=5000
     depends_on:
       db:
+        # Use the service_healthy condition to wait for the db to be ready
         condition: service_healthy
     networks:
       - app-network
+    # The 'start' script from package.json is now the default command
     command: npm start
 
   db:
     image: postgres:13
-    env_file:
-      - .env
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -32,7 +32,8 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} || exit 1"]
+      # This test command checks if the database is ready to accept connections
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
